@@ -1,31 +1,56 @@
-import OpenAI from 'openai';
+import OpenAI from "openai";
 import readline from "readline";
+import fetch, { Headers } from "node-fetch";
+import { Blob } from "fetch-blob";
+import { FormData, File } from "formdata-node";
+import { config } from "dotenv";
 
-import fetch, { Headers } from 'node-fetch';
-import { Blob } from 'fetch-blob';
-import { FormData } from 'formdata-node';
+// Cargar variables del archivo .env
+config();
 
-// Polyfills para Node.js < 18
+// Polyfills necesarios para Node.js < 18
 globalThis.fetch = fetch;
-globalThis.Headers = Headers;
 globalThis.Blob = Blob;
 globalThis.FormData = FormData;
+globalThis.File = File;
+globalThis.Headers = Headers;
 
+// Crear instancia del cliente de OpenAI
 const openai = new OpenAI({
-  apiKey: "xxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  //apiKey: process.env.OPENAI_API_KEY, 
+  apiKey: "xxxxxx",
 });
 
-async function main() {
+// Configurar consola interactiva
+const userInterface = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+console.log("🤖 Escribí tu mensaje para comenzar el chat con GPT:");
+userInterface.prompt();
+
+// Historial de conversación
+const messages = [
+  { role: "system", content: "Sos un asistente útil y conversacional." }
+];
+
+userInterface.on("line", async (input) => {
+  messages.push({ role: "user", content: input });
+
   try {
-    const response = await openai.chat.completions.create({
+    const res = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
-      messages: [{ role: "user", content: "hello" }],
+      messages: messages,
     });
 
-    console.log(response.choices[0].message.content);
-  } catch (error) {
-    console.error("Error al llamar a la API:", error);
-  }
-}
+    const reply = res.choices[0].message.content;
+    console.log("🤖 GPT:", reply);
+    messages.push({ role: "assistant", content: reply });
 
-main();
+  } catch (e) {
+    console.error("❌ Error:", e);
+  }
+
+  userInterface.prompt();
+});
